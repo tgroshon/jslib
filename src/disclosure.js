@@ -1,5 +1,6 @@
 /**
- *
+ * Disclosure: A simple, accessible foundation for building custom UIs that show
+ * and hide content, like togglable accordion panels.
  */
 export class Disclosure extends HTMLElement {
   constructor() {

@@ -1,5 +1,6 @@
 /**
- *
+ * Popover: floating panels with arbitrary content like navigation menus, mobile
+ * menus and flyout menus.
  */
 export class Popover extends HTMLElement {
   constructor() {

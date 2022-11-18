@@ -1,5 +1,6 @@
 /**
- *
+ * Tabs: fully customizable tab interfaces, with robust focus management and
+ * keyboard navigation support.
  */
 export class Tabs extends HTMLElement {
   constructor() {
