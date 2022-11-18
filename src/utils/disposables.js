@@ -1,3 +1,5 @@
+import { microTask } from "./microtask";
+
 export function disposables() {
   let disposables = [];
   let queue = [];
