@@ -1,22 +1,27 @@
 {
   "name": "jslib",
   "version": "1.0.0",
-  "description": "- Menu (Dropdown) - Listbox (Select) - Combobox (Autocomplete) - Switch (Toggle) - Disclosure - Dialog (Modal) - Popover - Radio Group - Tabs - Transition",
+  "description": "Tommy's JS Lib",
+  "author": "Tommy Groshong <tgroshon@pm.me>",
+  "private": true,
+  "license": "UNLICENSED",
+  "homepage": "https://github.com/tgroshon/jslib#readme",
+  "bugs": {
+    "url": "https://github.com/tgroshon/jslib/issues"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/tgroshon/jslib.git"
   },
-  "author": "Tommy Groshong <tgroshon@pm.me>",
-  "license": "UNLICENSED",
-  "bugs": {
-    "url": "https://github.com/tgroshon/jslib/issues"
-  },
-  "homepage": "https://github.com/tgroshon/jslib#readme",
+  "type": "module",
   "main": "index.js",
   "module": "index.js",
   "scripts": {
     "start": "web-dev-server --open demo/ --node-resolve",
     "start:watch": "web-dev-server --open demo/ --node-resolve --watch",
+    "lint": "eslint 'src/**/*.js'",
+    "lint:fix": "eslint --fix 'src/**/*.js'",
+    "format": "prettier --write 'src/**/*.js'",
     "test": "web-test-runner test/**/*.test.html --coverage --node-resolve --playwright --browsers chromium",
     "test:watch": "web-test-runner test/**/*.test.html --node-resolve --watch --playwright --browsers chromium"
   },
@@ -28,6 +33,9 @@
     "@open-wc/testing": "2.5.33",
     "@web/dev-server": "0.1.35",
     "@web/test-runner": "0.15.0",
-    "@web/test-runner-playwright": "^0.9.0"
+    "@web/test-runner-playwright": "^0.9.0",
+    "eslint": "^8.27.0",
+    "eslint-config-prettier": "^8.5.0",
+    "prettier": "^2.7.1"
   }
 }
