@@ -1,12 +1,20 @@
 # jslib
 
-- Menu (Dropdown)
-- Listbox (Select)
-- Combobox (Autocomplete)
-- Switch (Toggle)
-- Disclosure
-- Dialog (Modal)
-- Popover
-- Radio Group
-- Tabs
-- Transition
+Implement core functionality UI widgets as web components.
+
+## Components
+
+- [ ] Dropdown
+- [ ] Listbox
+- [ ] Combobox
+- [ ] Switch
+- [ ] Disclosure
+- [ ] Modal
+- [ ] Popover
+- [ ] Radio Group
+- [ ] Tabs
+- [ ] Transition
+
+## Tooling
+
+https://modern-web.dev/

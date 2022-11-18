@@ -1,0 +1,33 @@
+{
+  "name": "jslib",
+  "version": "1.0.0",
+  "description": "- Menu (Dropdown) - Listbox (Select) - Combobox (Autocomplete) - Switch (Toggle) - Disclosure - Dialog (Modal) - Popover - Radio Group - Tabs - Transition",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tgroshon/jslib.git"
+  },
+  "author": "Tommy Groshong <tgroshon@pm.me>",
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://github.com/tgroshon/jslib/issues"
+  },
+  "homepage": "https://github.com/tgroshon/jslib#readme",
+  "main": "index.js",
+  "module": "index.js",
+  "scripts": {
+    "start": "web-dev-server --open demo/ --node-resolve",
+    "start:watch": "web-dev-server --open demo/ --node-resolve --watch",
+    "test": "web-test-runner test/**/*.test.html --coverage --node-resolve --playwright --browsers chromium",
+    "test:watch": "web-test-runner test/**/*.test.html --node-resolve --watch --playwright --browsers chromium"
+  },
+  "dependencies": {
+    "lit-element": "2.5.1",
+    "lit-html": "1.4.1"
+  },
+  "devDependencies": {
+    "@open-wc/testing": "2.5.33",
+    "@web/dev-server": "0.1.35",
+    "@web/test-runner": "0.15.0",
+    "@web/test-runner-playwright": "^0.9.0"
+  }
+}
