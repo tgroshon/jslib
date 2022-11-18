@@ -1,5 +1,6 @@
-import { MyElement } from "./src/index.js";
+import { MyElement, Popover } from "./src/index.js";
 
 window.customElements.define("my-element", MyElement);
+window.customElements.define("my-popover", Popover);
 
-export { MyElement };
+export { MyElement, Popover };
