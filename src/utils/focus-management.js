@@ -2,8 +2,6 @@
  * Credit to TailwindLabs HeadlessUI project
  */
 import { disposables } from "./disposables";
-import { match } from "./match";
-import { getOwnerDocument } from "./owner";
 
 // Credit:
 //  - https://stackoverflow.com/a/30753870
@@ -21,6 +19,9 @@ const FOCUSABLE_SELECTORS = [
   .map((selector) => `${selector}:not([tabindex='-1'])`)
   .join(",");
 
+/**
+ * Enum to indicate what direction to move focus; also used as a bitmask
+ */
 export var Focus;
 (function (Focus) {
   /** Focus the first non-disabled element */
@@ -37,6 +38,9 @@ export var Focus;
   Focus[(Focus["NoScroll"] = 32)] = "NoScroll";
 })(Focus || (Focus = {}));
 
+/**
+ * Enum to indicate result of focus move attempt
+ */
 export var FocusResult;
 (function (FocusResult) {
   /** Something went wrong while trying to focus. */
@@ -49,6 +53,9 @@ export var FocusResult;
   FocusResult[(FocusResult["Underflow"] = 3)] = "Underflow";
 })(FocusResult || (FocusResult = {}));
 
+/**
+ * Enum of rules to follow when selecting how to move focus
+ */
 export var FocusableMode;
 (function (FocusableMode) {
   /** The element itself must be focusable. */
@@ -63,11 +70,53 @@ var Direction;
   Direction[(Direction["Next"] = 1)] = "Next";
 })(Direction || (Direction = {}));
 
+/**
+ * Helper: Poor-man pattern matching in javascript
+ */
+function match(value, lookup, ...args) {
+  if (value in lookup) {
+    let returnValue = lookup[value];
+    return typeof returnValue === "function"
+      ? returnValue(...args)
+      : returnValue;
+  }
+
+  let error = new Error(
+    `Tried to handle "${value}" but there is no handler defined. Only defined handlers are: ${Object.keys(
+      lookup
+    )
+      .map((key) => `"${key}"`)
+      .join(", ")}.`
+  );
+  if (Error.captureStackTrace) Error.captureStackTrace(error, match);
+  throw error;
+}
+
+/**
+ * Helper: get the element's ownerDocument with fallback to traverse element.current
+ */
+function getOwnerDocument(element) {
+  if (element instanceof Node) return element.ownerDocument;
+
+  // eslint-disable-next-line no-prototype-builtins
+  if (element?.hasOwnProperty("current")) {
+    if (element.current instanceof Node) return element.current.ownerDocument;
+  }
+
+  return document;
+}
+
+/**
+ * Query an Array of all known focusable elements in the document
+ */
 export function getFocusableElements(container = document.body) {
   if (container == null) return [];
   return Array.from(container.querySelectorAll(FOCUSABLE_SELECTORS));
 }
 
+/**
+ * Is the given element a known focusable type of element?
+ */
 export function isFocusableElement(element, mode = FocusableMode.Strict) {
   if (element === getOwnerDocument(element)?.body) return false;
 
@@ -86,6 +135,9 @@ export function isFocusableElement(element, mode = FocusableMode.Strict) {
   });
 }
 
+/**
+ * Restore focus to given element if it's owning document's active element is not "focusable"
+ */
 export function restoreFocusIfNecessary(element) {
   const ownerDocument = getOwnerDocument(element);
   disposables().nextFrame(() => {
@@ -98,6 +150,9 @@ export function restoreFocusIfNecessary(element) {
   });
 }
 
+/**
+ * Focus given element, prevent scroll
+ */
 export function focusElement(element) {
   element?.focus({ preventScroll: true });
 }
@@ -108,6 +163,9 @@ function isSelectableElement(element) {
   return element?.matches?.(selectableSelector) ?? false;
 }
 
+/**
+ * Return shallow copy of node array, sorted by DOM position first to last
+ */
 export function sortByDomNode(nodes, resolveKey = (i) => i) {
   return nodes.slice().sort((aItem, zItem) => {
     const a = resolveKey(aItem);
@@ -115,6 +173,8 @@ export function sortByDomNode(nodes, resolveKey = (i) => i) {
 
     if (a === null || z === null) return 0;
 
+    // Position of Node Z relative to Node A; position = bitmask
+    // MDN: https://developer.mozilla.org/en-US/docs/Web/API/Node/compareDocumentPosition
     const position = a.compareDocumentPosition(z);
 
     if (position & Node.DOCUMENT_POSITION_FOLLOWING) return -1;
@@ -123,10 +183,22 @@ export function sortByDomNode(nodes, resolveKey = (i) => i) {
   });
 }
 
+/**
+ * Relative move the focus from a given Node according to a Focus-enum
+ * indicator: i.e. Next, Last, Previous, etc.
+ *
+ * Convenience function for calling focusIn()
+ */
 export function focusFrom(current, focus) {
   return focusIn(getFocusableElements(), focus, true, current);
 }
 
+/**
+ * Move focus to an element in a given container according to a
+ * Focus-enum indicator: i.e. Next, Last, Previous, etc.
+ *
+ * Defaults to using the document's current active element
+ */
 export function focusIn(container, focus, sorted = true, active = null) {
   const ownerDocument = Array.isArray(container)
     ? container.length > 0
@@ -184,6 +256,7 @@ export function focusIn(container, focus, sorted = true, active = null) {
     // Try the next one in line
     offset += direction;
   } while (next !== ownerDocument.activeElement);
+
   // By default if you <Tab> to a text input or a textarea, the browser will
   // select all the text once the focus is inside these DOM Nodes. However,
   // since we are manually moving focus this behaviour is not happening. This
@@ -195,6 +268,7 @@ export function focusIn(container, focus, sorted = true, active = null) {
   if (focus & (Focus.Next | Focus.Previous) && isSelectableElement(next)) {
     next.select();
   }
+
   // This is a little weird, but let me try and explain: There are a few scenario's
   // in chrome for example where a focused `<a>` tag does not get the default focus
   // styles and sometimes they do. This highly depends on whether you started by

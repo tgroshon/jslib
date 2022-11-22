@@ -1,5 +1,22 @@
-import { microTask } from "./microtask";
+// Polyfill
+function microTask(cb) {
+  if (typeof queueMicrotask === "function") {
+    queueMicrotask(cb);
+  } else {
+    Promise.resolve()
+      .then(cb)
+      .catch((e) =>
+        setTimeout(() => {
+          throw e;
+        })
+      );
+  }
+}
 
+/**
+ * Re-usable API wrapper for scheduling events that you can easily cancel
+ * Useful in react use-effect style cancellation situations
+ */
 export function disposables() {
   let disposables = [];
   let queue = [];
