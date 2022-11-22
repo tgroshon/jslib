@@ -1,4 +1,6 @@
-import { computePosition, platform } from "./utils/computePosition";
+import { computePosition, createPlatform } from "./utils/computePosition";
+
+const platform = createPlatform();
 
 /**
  * Popover: floating panels with arbitrary content like navigation menus, mobile

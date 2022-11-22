@@ -4,11 +4,9 @@
  * Computes the `x` and `y` coordinates that will place the floating element
  * next to a reference element when it is given a certain positioning strategy.
  *
- * This export does not have any `platform` interface logic. You will need to
- * write one for the platform you are using Floating UI with.
+ * The `platform` interface logic is to abstract platforms like react-native, web, etc.
  */
 export const computePosition = async (reference, floating, config) => {
-  var _a;
   const {
     placement = "bottom",
     strategy = "absolute",
@@ -16,16 +14,17 @@ export const computePosition = async (reference, floating, config) => {
     platform,
   } = config;
   const validMiddleware = middleware.filter(Boolean);
-  const rtl = await ((_a = platform.isRTL) === null || _a === void 0
-    ? void 0
-    : _a.call(platform, floating));
+  const rtl = getComputedStyle(floating).direction === "rtl";
   let rects = await platform.getElementRects({ reference, floating, strategy });
+
   let { x, y } = computeCoordsFromPlacement(rects, placement, rtl);
   let statefulPlacement = placement;
+
   let middlewareData = {};
   let resetCount = 0;
   for (let i = 0; i < validMiddleware.length; i++) {
     const { name, fn } = validMiddleware[i];
+
     const {
       x: nextX,
       y: nextY,
@@ -42,11 +41,18 @@ export const computePosition = async (reference, floating, config) => {
       platform,
       elements: { reference, floating },
     });
-    x = nextX !== null && nextX !== void 0 ? nextX : x;
-    y = nextY !== null && nextY !== void 0 ? nextY : y;
-    middlewareData = Object.assign(Object.assign({}, middlewareData), {
-      [name]: Object.assign(Object.assign({}, middlewareData[name]), data),
-    });
+
+    x = nextX ?? x;
+    y = nextY ?? y;
+
+    middlewareData = {
+      ...middlewareData,
+      [name]: {
+        ...middlewareData[name],
+        ...data,
+      },
+    };
+
     if (reset && resetCount <= 50) {
       resetCount++;
       if (typeof reset === "object") {
@@ -115,24 +121,26 @@ function computeCoordsFromPlacement({ reference, floating }, placement, rtl) {
   return coords;
 }
 
-export const platform = {
-  getClippingRect,
-  convertOffsetParentRelativeRectToViewportRelativeRect,
-  isElement,
-  getDimensions,
-  getOffsetParent,
-  getDocumentElement,
-  getElementRects: ({ reference, floating, strategy }) => ({
-    reference: getRectRelativeToOffsetParent(
-      reference,
-      getOffsetParent(floating),
-      strategy
-    ),
-    floating: { ...getDimensions(floating), x: 0, y: 0 },
-  }),
-  getClientRects: (element) => Array.from(element.getClientRects()),
-  isRTL: (element) => getComputedStyle(element).direction === "rtl",
-};
+export function createPlatform() {
+  return {
+    getClippingRect,
+    convertOffsetParentRelativeRectToViewportRelativeRect,
+    isElement,
+    getDimensions,
+    getOffsetParent,
+    getDocumentElement,
+    getElementRects: ({ reference, floating, strategy }) => ({
+      reference: getRectRelativeToOffsetParent(
+        reference,
+        getOffsetParent(floating),
+        strategy
+      ),
+      floating: { ...getDimensions(floating), x: 0, y: 0 },
+    }),
+    getClientRects: (element) => Array.from(element.getClientRects()),
+    isRTL: (element) => getComputedStyle(element).direction === "rtl",
+  };
+}
 
 function getDimensions(element) {
   if (isHTMLElement(element)) {
