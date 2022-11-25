@@ -41,15 +41,18 @@ export const computePosition = async (reference, floating, config) => {
     strategy,
   });
 
-  let { x, y } = computeCoordsFromPlacement(rects, placement, rtl);
+  const { x, y } = computeCoordsFromPlacement(rects, placement, rtl);
   const statefulPlacement = placement;
 
   let positionData = {
     x,
     y,
     placement: statefulPlacement,
+    initialPlacement: placement,
+    elements: { reference, floating },
     strategy,
     rtl,
+    rects,
   };
 
   if (offsetValue) {
@@ -58,6 +61,8 @@ export const computePosition = async (reference, floating, config) => {
 
   return positionData;
 };
+
+// const getClientRects = (element) => Array.from(element.getClientRects());
 
 /**
  * Handle OFFSET Displaces the floating element from its reference element.
@@ -685,7 +690,7 @@ function rectToClientRect(rect) {
  */
 // eslint-disable-next-line no-unused-vars
 async function flip(options = {}, middlewareArguments) {
-  // FIXME: need to get rects, initialPlacement, placement, and elements into args
+  // FIXME: Need to work this in without a reset ability
   const {
     placement,
     middlewareData,
