@@ -677,3 +677,243 @@ function rectToClientRect(rect) {
     bottom: rect.y + rect.height,
   };
 }
+
+/**
+ * Changes the placement of the floating element to one that will fit if the
+ * initially specified `placement` does not.
+ * @see https://floating-ui.com/docs/flip
+ */
+// eslint-disable-next-line no-unused-vars
+async function flip(options = {}, middlewareArguments) {
+  // FIXME: need to get rects, initialPlacement, placement, and elements into args
+  const {
+    placement,
+    middlewareData,
+    rects,
+    initialPlacement,
+    platform,
+    elements,
+  } = middlewareArguments;
+
+  const {
+    mainAxis: checkMainAxis = true,
+    crossAxis: checkCrossAxis = true,
+    fallbackPlacements: specifiedFallbackPlacements,
+    fallbackStrategy = "bestFit",
+    flipAlignment = true,
+    ...detectOverflowOptions
+  } = options;
+
+  const side = getSide(placement);
+  const isBasePlacement = side === initialPlacement;
+
+  const fallbackPlacements =
+    specifiedFallbackPlacements ||
+    (isBasePlacement || !flipAlignment
+      ? [getOppositePlacement(initialPlacement)]
+      : getExpandedPlacements(initialPlacement));
+
+  const placements = [initialPlacement, ...fallbackPlacements];
+
+  const overflow = await detectOverflow(
+    middlewareArguments,
+    detectOverflowOptions
+  );
+
+  const overflows = [];
+  let overflowsData = middlewareData.flip?.overflows || [];
+
+  if (checkMainAxis) {
+    overflows.push(overflow[side]);
+  }
+
+  if (checkCrossAxis) {
+    const { main, cross } = getAlignmentSides(
+      placement,
+      rects,
+      await platform.isRTL?.(elements.floating)
+    );
+    overflows.push(overflow[main], overflow[cross]);
+  }
+
+  overflowsData = [...overflowsData, { placement, overflows }];
+
+  // One or more sides is overflowing
+  if (!overflows.every((side) => side <= 0)) {
+    const nextIndex = (middlewareData.flip?.index ?? 0) + 1;
+    const nextPlacement = placements[nextIndex];
+
+    if (nextPlacement) {
+      // Try next placement and re-run the lifecycle
+      return {
+        data: {
+          index: nextIndex,
+          overflows: overflowsData,
+        },
+        reset: {
+          placement: nextPlacement,
+        },
+      };
+    }
+
+    let resetPlacement = "bottom";
+    switch (fallbackStrategy) {
+      case "bestFit": {
+        const placement = overflowsData
+          .map((d) => [
+            d,
+            d.overflows
+              .filter((overflow) => overflow > 0)
+              .reduce((acc, overflow) => acc + overflow, 0),
+          ])
+          .sort((a, b) => a[1] - b[1])[0]?.[0].placement;
+        if (placement) {
+          resetPlacement = placement;
+        }
+        break;
+      }
+      case "initialPlacement":
+        resetPlacement = initialPlacement;
+        break;
+      default:
+    }
+
+    if (placement !== resetPlacement) {
+      return {
+        reset: {
+          placement: resetPlacement,
+        },
+      };
+    }
+  }
+
+  return {};
+}
+
+/**
+ * Resolves with an object of overflow side offsets that determine how much the
+ * element is overflowing a given clipping boundary.
+ * - positive = overflowing the boundary by that number of pixels
+ * - negative = how many pixels left before it will overflow
+ * - 0 = lies flush with the boundary
+ * @see https://floating-ui.com/docs/detectOverflow
+ */
+export async function detectOverflow(middlewareArguments, options = {}) {
+  const { x, y, platform, rects, elements, strategy } = middlewareArguments;
+
+  const {
+    boundary = "clippingAncestors",
+    rootBoundary = "viewport",
+    elementContext = "floating",
+    altBoundary = false,
+    padding = 0,
+  } = options;
+
+  const paddingObject = getSideObjectFromPadding(padding);
+  const altContext = elementContext === "floating" ? "reference" : "floating";
+  const element = elements[altBoundary ? altContext : elementContext];
+
+  const clippingClientRect = rectToClientRect(
+    await platform.getClippingRect({
+      element:
+        isElement(element) ?? true
+          ? element
+          : element.contextElement ||
+            (await platform.getDocumentElement?.(elements.floating)),
+      boundary,
+      rootBoundary,
+      strategy,
+    })
+  );
+
+  const elementClientRect = rectToClientRect(
+    platform.convertOffsetParentRelativeRectToViewportRelativeRect
+      ? await platform.convertOffsetParentRelativeRectToViewportRelativeRect({
+          rect:
+            elementContext === "floating"
+              ? { ...rects.floating, x, y }
+              : rects.reference,
+          offsetParent: await platform.getOffsetParent?.(elements.floating),
+          strategy,
+        })
+      : rects[elementContext]
+  );
+
+  return {
+    top: clippingClientRect.top - elementClientRect.top + paddingObject.top,
+    bottom:
+      elementClientRect.bottom -
+      clippingClientRect.bottom +
+      paddingObject.bottom,
+    left: clippingClientRect.left - elementClientRect.left + paddingObject.left,
+    right:
+      elementClientRect.right - clippingClientRect.right + paddingObject.right,
+  };
+}
+
+function expandPaddingObject(padding) {
+  return { top: 0, right: 0, bottom: 0, left: 0, ...padding };
+}
+
+function getSideObjectFromPadding(padding) {
+  return typeof padding !== "number"
+    ? expandPaddingObject(padding)
+    : { top: padding, right: padding, bottom: padding, left: padding };
+}
+
+const OPPOSITE_PLACEMENT_HASH = {
+  left: "right",
+  right: "left",
+  bottom: "top",
+  top: "bottom",
+};
+
+function getOppositePlacement(placement) {
+  return placement.replace(
+    /left|right|bottom|top/g,
+    (matched) => OPPOSITE_PLACEMENT_HASH[matched]
+  );
+}
+
+const OPPOSITE_ALIGNMENT_PLACEMENT = { start: "end", end: "start" };
+
+export function getOppositeAlignmentPlacement(placement) {
+  return placement.replace(
+    /start|end/g,
+    (matched) => OPPOSITE_ALIGNMENT_PLACEMENT[matched]
+  );
+}
+
+function getExpandedPlacements(placement) {
+  const oppositePlacement = getOppositePlacement(placement);
+
+  return [
+    getOppositeAlignmentPlacement(placement),
+    oppositePlacement,
+    getOppositeAlignmentPlacement(oppositePlacement),
+  ];
+}
+
+function getAlignmentSides(placement, rects, rtl = false) {
+  const alignment = getAlignment(placement);
+  const mainAxis = getMainAxisFromPlacement(placement);
+  const length = getLengthFromAxis(mainAxis);
+
+  let mainAlignmentSide =
+    mainAxis === "x"
+      ? alignment === (rtl ? "end" : "start")
+        ? "right"
+        : "left"
+      : alignment === "start"
+      ? "bottom"
+      : "top";
+
+  if (rects.reference[length] > rects.floating[length]) {
+    mainAlignmentSide = getOppositePlacement(mainAlignmentSide);
+  }
+
+  return {
+    main: mainAlignmentSide,
+    cross: getOppositePlacement(mainAlignmentSide),
+  };
+}
