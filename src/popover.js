@@ -1,6 +1,4 @@
-import { computePosition, createPlatform } from "./utils/computePosition";
-
-const platform = createPlatform();
+import { computePosition } from "./utils/computePosition";
 
 /**
  * Popover: floating panels with arbitrary content like navigation menus, mobile
@@ -68,7 +66,7 @@ export class Popover extends HTMLElement {
     shadow.appendChild(wrapper);
 
     function update() {
-      computePosition(trigger, popover, { placement: "top", platform }).then(
+      computePosition(trigger, popover, { placement: "top" }).then(
         ({ x, y }) => {
           Object.assign(popover.style, {
             left: `${x}px`,
@@ -87,6 +85,7 @@ export class Popover extends HTMLElement {
       popover.style.display = "";
     }
 
+    // TODO: (1) delegate event listeners, (2) teardown listeners after component
     [
       ["mouseenter", showTooltip],
       ["mouseleave", hideTooltip],

@@ -27,84 +27,24 @@
 /**
  * Computes the `x` and `y` coordinates that will place the floating element
  * next to a reference element when it is given a certain positioning strategy.
- *
- * The `platform` interface logic is to abstract platforms like react-native, web, etc.
  */
 export const computePosition = async (reference, floating, config) => {
-  const {
-    placement = "bottom",
-    strategy = "absolute",
-    middleware = [],
-    platform,
-  } = config;
-  const validMiddleware = middleware.filter(Boolean);
+  const { placement = "bottom", strategy = "absolute" } = config;
   const rtl = getComputedStyle(floating).direction === "rtl";
-  let rects = await platform.getElementRects({ reference, floating, strategy });
+  const rects = getElementRects({
+    reference,
+    floating,
+    strategy,
+  });
 
-  let { x, y } = computeCoordsFromPlacement(rects, placement, rtl);
-  let statefulPlacement = placement;
+  const { x, y } = computeCoordsFromPlacement(rects, placement, rtl);
+  const statefulPlacement = placement;
 
-  let middlewareData = {};
-  let resetCount = 0;
-  for (let i = 0; i < validMiddleware.length; i++) {
-    const { name, fn } = validMiddleware[i];
-
-    const {
-      x: nextX,
-      y: nextY,
-      data,
-      reset,
-    } = await fn({
-      x,
-      y,
-      initialPlacement: placement,
-      placement: statefulPlacement,
-      strategy,
-      middlewareData,
-      rects,
-      platform,
-      elements: { reference, floating },
-    });
-
-    x = nextX ?? x;
-    y = nextY ?? y;
-
-    middlewareData = {
-      ...middlewareData,
-      [name]: {
-        ...middlewareData[name],
-        ...data,
-      },
-    };
-
-    if (reset && resetCount <= 50) {
-      resetCount++;
-      if (typeof reset === "object") {
-        if (reset.placement) {
-          statefulPlacement = reset.placement;
-        }
-        if (reset.rects) {
-          rects =
-            reset.rects === true
-              ? await platform.getElementRects({
-                  reference,
-                  floating,
-                  strategy,
-                })
-              : reset.rects;
-        }
-        ({ x, y } = computeCoordsFromPlacement(rects, statefulPlacement, rtl));
-      }
-      i = -1;
-      continue;
-    }
-  }
   return {
     x,
     y,
     placement: statefulPlacement,
     strategy,
-    middlewareData,
   };
 };
 
@@ -145,24 +85,14 @@ function computeCoordsFromPlacement({ reference, floating }, placement, rtl) {
   return coords;
 }
 
-export function createPlatform() {
+function getElementRects({ reference, floating, strategy }) {
   return {
-    getClippingRect,
-    convertOffsetParentRelativeRectToViewportRelativeRect,
-    isElement,
-    getDimensions,
-    getOffsetParent,
-    getDocumentElement,
-    getElementRects: ({ reference, floating, strategy }) => ({
-      reference: getRectRelativeToOffsetParent(
-        reference,
-        getOffsetParent(floating),
-        strategy
-      ),
-      floating: { ...getDimensions(floating), x: 0, y: 0 },
-    }),
-    getClientRects: (element) => Array.from(element.getClientRects()),
-    isRTL: (element) => getComputedStyle(element).direction === "rtl",
+    reference: getRectRelativeToOffsetParent(
+      reference,
+      getOffsetParent(floating),
+      strategy
+    ),
+    floating: { ...getDimensions(floating), x: 0, y: 0 },
   };
 }
 
