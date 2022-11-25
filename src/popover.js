@@ -44,6 +44,7 @@ export class Popover extends HTMLElement {
       }
 
       .popover {
+        display:none;
         width: max-content;
         position: absolute;
         top: 20px;
@@ -66,11 +67,33 @@ export class Popover extends HTMLElement {
     shadow.appendChild(style);
     shadow.appendChild(wrapper);
 
-    computePosition(trigger, popover, { platform }).then(({ x, y }) => {
-      Object.assign(popover.style, {
-        left: `${x}px`,
-        top: `${y}px`,
-      });
+    function update() {
+      computePosition(trigger, popover, { placement: "top", platform }).then(
+        ({ x, y }) => {
+          Object.assign(popover.style, {
+            left: `${x}px`,
+            top: `${y}px`,
+          });
+        }
+      );
+    }
+
+    function showTooltip() {
+      popover.style.display = "block";
+      update();
+    }
+
+    function hideTooltip() {
+      popover.style.display = "";
+    }
+
+    [
+      ["mouseenter", showTooltip],
+      ["mouseleave", hideTooltip],
+      ["focus", showTooltip],
+      ["blur", hideTooltip],
+    ].forEach(([event, listener]) => {
+      trigger.addEventListener(event, listener);
     });
   }
 }
