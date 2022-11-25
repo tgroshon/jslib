@@ -26,8 +26,11 @@ export class Popover extends HTMLElement {
     const trigger = document.createElement("span");
     trigger.setAttribute("class", "trigger");
     trigger.setAttribute("tabindex", 0);
-    trigger.textContent = "hover me";
     wrapper.appendChild(trigger);
+
+    const defaultSlot = document.createElement("slot");
+    defaultSlot.innerText = "Nothing Set";
+    trigger.appendChild(defaultSlot);
 
     const popover = document.createElement("span");
     popover.setAttribute("class", "popover");
