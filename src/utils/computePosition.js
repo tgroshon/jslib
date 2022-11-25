@@ -29,7 +29,11 @@
  * next to a reference element when it is given a certain positioning strategy.
  */
 export const computePosition = async (reference, floating, config) => {
-  const { placement = "bottom", strategy = "absolute" } = config;
+  const {
+    placement = "bottom",
+    strategy = "absolute",
+    offset: offsetValue,
+  } = config;
   const rtl = getComputedStyle(floating).direction === "rtl";
   const rects = getElementRects({
     reference,
@@ -37,16 +41,59 @@ export const computePosition = async (reference, floating, config) => {
     strategy,
   });
 
-  const { x, y } = computeCoordsFromPlacement(rects, placement, rtl);
+  let { x, y } = computeCoordsFromPlacement(rects, placement, rtl);
   const statefulPlacement = placement;
 
-  return {
+  let positionData = {
     x,
     y,
     placement: statefulPlacement,
     strategy,
+    rtl,
   };
+
+  if (offsetValue) {
+    positionData = offset(offsetValue, positionData);
+  }
+
+  return positionData;
 };
+
+/**
+ * Handle OFFSET Displaces the floating element from its reference element.
+ */
+function offset(value, positionData) {
+  const { placement, rtl, x, y, strategy } = positionData;
+
+  const side = getSide(placement);
+  const alignment = getAlignment(placement);
+  const isVertical = getMainAxisFromPlacement(placement) === "x";
+  const mainAxisMulti = ["left", "top"].includes(side) ? -1 : 1;
+  const crossAxisMulti = rtl && isVertical ? -1 : 1;
+
+  const rawValue =
+    typeof value === "function"
+      ? value({ x, y, rtl, placement, strategy })
+      : value;
+
+  let { mainAxis, crossAxis, alignmentAxis } =
+    typeof rawValue === "number"
+      ? { mainAxis: rawValue, crossAxis: 0, alignmentAxis: null }
+      : Object.assign(
+          { mainAxis: 0, crossAxis: 0, alignmentAxis: null },
+          rawValue
+        );
+
+  if (alignment && typeof alignmentAxis === "number") {
+    crossAxis = alignment === "end" ? alignmentAxis * -1 : alignmentAxis;
+  }
+
+  const diffCoords = isVertical
+    ? { x: crossAxis * crossAxisMulti, y: mainAxis * mainAxisMulti }
+    : { x: mainAxis * mainAxisMulti, y: crossAxis * crossAxisMulti };
+
+  return { ...positionData, x: x + diffCoords.x, y: y + diffCoords.y };
+}
 
 function computeCoordsFromPlacement({ reference, floating }, placement, rtl) {
   const commonX = reference.x + reference.width / 2 - floating.width / 2;
@@ -387,6 +434,7 @@ function getNodeScroll(element) {
   };
 }
 
+// eslint-disable-next-line no-unused-vars
 function convertOffsetParentRelativeRectToViewportRelativeRect({
   rect,
   offsetParent,
@@ -458,9 +506,12 @@ function getClientRectFromClippingAncestor(
   }
   return rectToClientRect(getDocumentRect(getDocumentElement(element)));
 }
-// A "clipping ancestor" is an overflowable container with the characteristic of
-// clipping (or hiding) overflowing elements with a position different from
-// `initial`
+
+/**
+ * A "clipping ancestor" is an overflowable container with the characteristic of
+ * clipping (or hiding) overflowing elements with a position different from
+ * `initial`.
+ */
 function getClippingElementAncestors(element) {
   let result = getOverflowAncestors(element).filter(
     (el) => isElement(el) && getNodeName(el) !== "body"
@@ -488,8 +539,12 @@ function getClippingElementAncestors(element) {
   }
   return result;
 }
-// Gets the maximum area that the element is visible in due to any number of
-// clipping ancestors
+
+/**
+ * Gets the maximum area that the element is visible in due to any number of
+ * clipping ancestors.
+ */
+// eslint-disable-next-line no-unused-vars
 function getClippingRect({ element, boundary, rootBoundary, strategy }) {
   const elementClippingAncestors =
     boundary === "clippingAncestors"

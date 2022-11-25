@@ -66,7 +66,7 @@ export class Popover extends HTMLElement {
     shadow.appendChild(wrapper);
 
     function update() {
-      computePosition(trigger, popover, { placement: "top" }).then(
+      computePosition(trigger, popover, { placement: "top", offset: 5 }).then(
         ({ x, y }) => {
           Object.assign(popover.style, {
             left: `${x}px`,
